@@ -10,7 +10,7 @@
 
 ## ✨ Overview
 
-Prebuilt **Asterisk 22.9.0** binary for **ARM64 / aarch64** devices running **Debian 13 (Trixie)**.  
+Prebuilt **Asterisk 22.9.0** binary for **ARM64 / aarch64** devices running **Debian 14.2.0-19**.  
 Optimized for low-resource devices like **Raspberry Pi 3**.
 
 ---
@@ -75,31 +75,6 @@ sudo bash install.sh
 
 ---
 
-## 🔧 Manual Install
-
-### 1. Install runtime dependencies
-
-```bash
-sudo apt-get install -y \
-  libbsd0 libc6 libcap2 libcrypt1 libedit2 \
-  libgcc-s1 liblzma5 libmd0 libsqlite3-0 \
-  libssl3t64 libstdc++6 libtinfo6 liburiparser1 \
-  libuuid1 libxml2 libxslt1.1 libzstd1 zlib1g \
-  libsrtp2-1 libspandsp2 libjansson4 libgsm1 \
-  libspeex1 libspeexdsp1 libogg0 libvorbis0a
-```
-
----
-
-### 2. Extract and install
-
-```bash
-sudo tar xzf asterisk-22.9.0-aarch64-debian13.tar.gz -C /
-sudo ldconfig
-```
-
----
-
 ## 📚 Included Modules
 
 ### 📡 Channel
@@ -136,7 +111,7 @@ sudo ldconfig
 
 | Device           | OS               | Kernel   | Status     |
 |------------------|------------------|----------|------------|
-| Raspberry Pi 3   | Debian 13 Trixie | 6.12.47  | ✅ Working |
+| Raspberry Pi 3   | Debian 14.2.0-19 | 6.12.47  | ✅ Working |
 
 ---
 
