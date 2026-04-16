@@ -1,4 +1,4 @@
-# 📞 Asterisk 22.9.0 — Prebuilt for aarch64 (Debian 13 Trixie)
+# 📞 Asterisk 22.9.0 — Prebuilt for aarch64 (Debian 14.2.0-19)
 
 ![Platform](https://img.shields.io/badge/arch-aarch64%20%7C%20ARM64-blue)
 ![OS](https://img.shields.io/badge/OS-Debian%2013%20(Trixie)-red)
