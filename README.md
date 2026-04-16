@@ -1,4 +1,4 @@
-# 📞 Asterisk 22.9.0 — Prebuilt for aarch64 (Debian 14.2.0-19)
+# 📞 Asterisk 22.9.0 — Prebuilt for aarch64 (Debian 13 Trixie)
 
 ![Platform](https://img.shields.io/badge/arch-aarch64%20%7C%20ARM64-blue)
 ![OS](https://img.shields.io/badge/OS-Debian%2013%20(Trixie)-red)
@@ -10,7 +10,7 @@
 
 ## ✨ Overview
 
-Prebuilt **Asterisk 22.9.0** binary for **ARM64 / aarch64** devices running **Debian 14.2.0-19**.  
+Prebuilt **Asterisk 22.9.0** binary for **ARM64 / aarch64** devices running **Debian 13 Trixie**.  
 Optimized for low-resource devices like **Raspberry Pi 3**.
 
 ---
@@ -111,7 +111,7 @@ sudo bash install.sh
 
 | Device           | OS               | Kernel   | Status     |
 |------------------|------------------|----------|------------|
-| Raspberry Pi 3   | Debian 14.2.0-19 | 6.12.47  | ✅ Working |
+| Raspberry Pi 3   | Debian 13 Trixie | 6.12.47  | ✅ Working |
 
 ---
 
