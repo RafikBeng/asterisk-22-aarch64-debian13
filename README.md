@@ -18,7 +18,7 @@ Optimized for low-resource devices like **Raspberry Pi 3**.
 ## 📦 Download
 
 👉 **Download packages:**
-- [Releases](https://github.com/asterisk/asterisk/releases/latest)
+- [Releases](https://github.com/RafikBeng/asterisk-22-aarch64-debian13/releases/latest)
   
 👉 **Install script:**
 - [install.sh](install.sh)
