@@ -2,10 +2,8 @@ name: Check for New Asterisk Version
 
 on:
   schedule:
-    # Run daily at 2:00 AM UTC
     - cron: '0 2 * * *'
   workflow_dispatch:
-    # Allow manual trigger
     inputs:
       force_version:
         description: 'Force build specific version (optional)'
@@ -13,7 +11,7 @@ on:
         type: string
 
 permissions:
-  contents: read
+  contents: write
   actions: write
 
 jobs:
@@ -22,90 +20,65 @@ jobs:
     
     outputs:
       new_version: ${{ steps.check.outputs.new_version }}
-      latest_version: ${{ steps.check.outputs.latest_version }}
       should_build: ${{ steps.check.outputs.should_build }}
     
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          
       - name: Get Latest Asterisk 22.x Version
         id: get_latest
         run: |
-          # Fetch the latest Asterisk 22.x version from official source
           LATEST_VERSION=$(curl -s https://downloads.asterisk.org/pub/telephony/asterisk/ | \
             grep -oP 'asterisk-22\.[0-9]+\.[0-9]+\.tar\.gz' | \
             sed 's/asterisk-\(.*\)\.tar\.gz/\1/' | \
             sort -V | \
             tail -n1)
           
-          if [ -z "$LATEST_VERSION" ]; then
-            echo "Failed to fetch latest version"
-            exit 1
-          fi
-          
           echo "latest_version=$LATEST_VERSION" >> $GITHUB_OUTPUT
           echo ">>> Latest Asterisk 22 version: $LATEST_VERSION"
       
-      - name: Check Last Built Version
+      - name: Get Last Built Version from GitHub Release
+        id: get_last
+        run: |
+          # Try to get the latest release tag
+          LATEST_RELEASE=""
+          
+          # Use GitHub CLI to get latest release (if available)
+          if command -v gh &> /dev/null; then
+            LATEST_TAG=$(gh release list --limit 1 --json tagName --jq '.[0].tagName' 2>/dev/null || echo "")
+            if [[ "$LATEST_TAG" =~ asterisk-([0-9]+\.[0-9]+\.[0-9]+) ]]; then
+              LATEST_RELEASE="${BASH_REMATCH[1]}"
+            fi
+          fi
+          
+          # Alternative: use git tags
+          if [ -z "$LATEST_RELEASE" ]; then
+            LATEST_TAG=$(git tag | grep 'asterisk-[0-9]\+\.[0-9]\+\.[0-9]\+' | sort -V | tail -n1)
+            if [[ "$LATEST_TAG" =~ asterisk-([0-9]+\.[0-9]+\.[0-9]+) ]]; then
+              LATEST_RELEASE="${BASH_REMATCH[1]}"
+            fi
+          fi
+          
+          echo "last_version=$LATEST_RELEASE" >> $GITHUB_OUTPUT
+          echo ">>> Last built version: ${LATEST_RELEASE:-none}"
+      
+      - name: Check if New Version Available
         id: check
         run: |
-          LATEST_VERSION="${{ steps.get_latest.outputs.latest_version }}"
-          FORCE_VERSION="${{ github.event.inputs.force_version }}"
+          LATEST="${{ steps.get_latest.outputs.latest_version }}"
+          LAST="${{ steps.get_last.outputs.last_version }}"
+          FORCE="${{ github.event.inputs.force_version }}"
           
-          # If force version is provided, use that
-          if [ -n "$FORCE_VERSION" ]; then
-            echo ">>> Force building version: $FORCE_VERSION"
-            echo "new_version=$FORCE_VERSION" >> $GITHUB_OUTPUT
-            echo "latest_version=$FORCE_VERSION" >> $GITHUB_OUTPUT
+          if [ -n "$FORCE" ]; then
+            echo ">>> Force building version: $FORCE"
+            echo "new_version=$FORCE" >> $GITHUB_OUTPUT
             echo "should_build=true" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-          
-          # Get the latest release tag from GitHub
-          LATEST_RELEASE=$(git ls-remote --tags origin | \
-            grep -o 'refs/tags/asterisk-[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*-build[0-9]*' | \
-            sed 's/refs\/tags\/asterisk-//' | \
-            sed 's/-build[0-9]*$//' | \
-            sort -V | \
-            tail -n1)
-          
-          # Alternative: check if version file exists
-          if [ -f .last_built_version ]; then
-            LAST_VERSION=$(cat .last_built_version)
-            echo ">>> Last built version from file: $LAST_VERSION"
-          else
-            LAST_VERSION="$LATEST_RELEASE"
-            echo ">>> Last built version from tags: $LAST_VERSION"
-          fi
-          
-          echo ">>> Latest available: $LATEST_VERSION"
-          echo ">>> Last built: $LAST_VERSION"
-          
-          # Compare versions
-          if [ -z "$LAST_VERSION" ] || [ "$LATEST_VERSION" != "$LAST_VERSION" ]; then
-            echo ">>> New version detected! Building $LATEST_VERSION"
-            echo "new_version=$LATEST_VERSION" >> $GITHUB_OUTPUT
-            echo "latest_version=$LATEST_VERSION" >> $GITHUB_OUTPUT
+          elif [ -z "$LAST" ] || [ "$LATEST" != "$LAST" ]; then
+            echo ">>> New version detected! Building $LATEST"
+            echo "new_version=$LATEST" >> $GITHUB_OUTPUT
             echo "should_build=true" >> $GITHUB_OUTPUT
           else
-            echo ">>> No new version available. Latest $LATEST_VERSION already built."
+            echo ">>> No new version. Latest $LATEST already built."
             echo "should_build=false" >> $GITHUB_OUTPUT
           fi
-          
-      - name: Save Latest Version
-        if: steps.check.outputs.should_build == 'true'
-        run: |
-          echo "${{ steps.check.outputs.latest_version }}" > .last_built_version
-          
-      - name: Commit Version File
-        if: steps.check.outputs.should_build == 'true'
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: "Update last built version to ${{ steps.check.outputs.latest_version }}"
-          file_pattern: .last_built_version
           
   trigger-build:
     needs: check-version
@@ -113,32 +86,21 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      - name: Trigger Asterisk Build Workflow
+      - name: Trigger Build
         uses: actions/github-script@v7
         with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const version = '${{ needs.check-version.outputs.new_version }}';
             
-            // Trigger the build workflow
             await github.rest.actions.createWorkflowDispatch({
               owner: context.repo.owner,
               repo: context.repo.repo,
               workflow_id: 'build_asterisk.yml',
-              ref: 'main', // or your default branch
+              ref: 'main',
               inputs: {
                 asterisk_version: version
               }
             });
             
-            console.log(`Triggered build for Asterisk ${version}`);
-            
-      - name: Notify on Success
-        if: success()
-        run: |
-          echo "✅ Build workflow triggered successfully for Asterisk ${{ needs.check-version.outputs.new_version }}"
-          
-      - name: Notify on Failure
-        if: failure()
-        run: |
-          echo "❌ Failed to trigger build workflow"
-          exit 1
+            console.log(`✅ Triggered build for Asterisk ${version}`);
