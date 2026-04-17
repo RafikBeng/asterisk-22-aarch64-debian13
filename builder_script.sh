@@ -96,41 +96,73 @@ make -j$(nproc)
 # --- 7. EXTRACT VERSION AFTER COMPILATION ---
 echo ">>> [BUILDER] Extracting Asterisk version..."
 
-# Method 1: Try to get from asterisk binary (most reliable)
 REAL_VERSION=""
-if [ -f main/asterisk ]; then
-    VERSION_OUTPUT=$(./main/asterisk -V 2>/dev/null || echo "")
-    # Extract just the version number (e.g., "Asterisk 22.9.0" -> "22.9.0")
-    REAL_VERSION=$(echo "$VERSION_OUTPUT" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -n1)
-    echo ">>> Version from binary: $REAL_VERSION"
-fi
 
-# Method 2: Try configure.ac or configure
+# Method 1: Try to get from asterisk binary (look in multiple locations)
+BINARY_LOCATIONS=(
+    "./asterisk"
+    "./main/asterisk"
+    "./usr/sbin/asterisk"
+    "./sbin/asterisk"
+)
+
+for BINARY_PATH in "${BINARY_LOCATIONS[@]}"; do
+    if [ -f "$BINARY_PATH" ] && [ -x "$BINARY_PATH" ]; then
+        echo ">>> Found binary at: $BINARY_PATH"
+        VERSION_OUTPUT=$($BINARY_PATH -V 2>/dev/null || echo "")
+        REAL_VERSION=$(echo "$VERSION_OUTPUT" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -n1)
+        if [ -n "$REAL_VERSION" ]; then
+            echo ">>> Version from binary ($BINARY_PATH): $REAL_VERSION"
+            break
+        fi
+    fi
+done
+
+# Method 2: Check if asterisk binary is available in PATH after build
 if [ -z "$REAL_VERSION" ]; then
-    if [ -f configure.ac ]; then
-        REAL_VERSION=$(grep -E 'ASTERISK_VERSION' configure.ac | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -n1)
-        echo ">>> Version from configure.ac: $REAL_VERSION"
+    # Try to run asterisk from the build directory
+    if [ -f "asterisk" ]; then
+        chmod +x asterisk
+        VERSION_OUTPUT=$(./asterisk -V 2>/dev/null || echo "")
+        REAL_VERSION=$(echo "$VERSION_OUTPUT" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -n1)
+        echo ">>> Version from ./asterisk: $REAL_VERSION"
     fi
 fi
 
-# Method 3: Try Makefile
+# Method 3: Try to get from Makefile
 if [ -z "$REAL_VERSION" ]; then
-    if [ -f Makefile ]; then
-        REAL_VERSION=$(grep -E '^VERSION=' Makefile | cut -d'=' -f2 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
+    if [ -f "Makefile" ]; then
+        REAL_VERSION=$(grep -E '^VERSION=' Makefile | cut -d'=' -f2 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -n1)
         echo ">>> Version from Makefile: $REAL_VERSION"
     fi
 fi
 
-# Method 4: Try version.h (clean extraction without #define)
+# Method 4: Try to get from configure script
 if [ -z "$REAL_VERSION" ]; then
-    if [ -f include/asterisk/version.h ]; then
-        # Clean extraction: get anything that looks like version number
-        REAL_VERSION=$(grep -E 'ASTERISK_VERSION' include/asterisk/version.h | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -n1)
-        echo ">>> Version from version.h: $REAL_VERSION"
+    if [ -f "configure" ]; then
+        REAL_VERSION=$(grep -E 'PACKAGE_VERSION' configure | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -n1)
+        echo ">>> Version from configure: $REAL_VERSION"
     fi
 fi
 
-# Method 5: Fallback to input version if it's a full version number
+# Method 5: Try to read from .version file if it exists
+if [ -z "$REAL_VERSION" ]; then
+    if [ -f ".version" ]; then
+        REAL_VERSION=$(cat .version | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -n1)
+        echo ">>> Version from .version file: $REAL_VERSION"
+    fi
+fi
+
+# Method 6: Try to extract from source files
+if [ -z "$REAL_VERSION" ]; then
+    # Look in main/version.c
+    if [ -f "main/version.c" ]; then
+        REAL_VERSION=$(grep -E 'ASTERISK_VERSION' main/version.c | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -n1)
+        echo ">>> Version from main/version.c: $REAL_VERSION"
+    fi
+fi
+
+# Method 7: Fallback to input version if it's a full version number
 if [ -z "$REAL_VERSION" ]; then
     if [[ "$ASTERISK_VER" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
         REAL_VERSION="$ASTERISK_VER"
@@ -139,10 +171,21 @@ if [ -z "$REAL_VERSION" ]; then
         # Last resort: try to extract from the tarball name we downloaded
         REAL_VERSION=$(echo "$ASTERISK_VER" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
         if [ -z "$REAL_VERSION" ]; then
+            echo ">>> ERROR: Could not detect version!"
+            echo ">>> ASTERISK_VER: $ASTERISK_VER"
+            echo ">>> Please check the build output above"
+            # Don't exit, use a default version
             REAL_VERSION="22.0.0"
-            echo ">>> WARNING: Could not detect version, using default: $REAL_VERSION"
+            echo ">>> Using default version: $REAL_VERSION"
         fi
     fi
+fi
+
+# Validate that REAL_VERSION is not empty
+if [ -z "$REAL_VERSION" ]; then
+    echo ">>> CRITICAL ERROR: Could not extract version number!"
+    echo ">>> Setting to 22.0.0 as fallback"
+    REAL_VERSION="22.0.0"
 fi
 
 echo ">>> [BUILDER] Final detected Asterisk version: $REAL_VERSION"
@@ -171,7 +214,14 @@ cd $BUILD_DIR/staging
 # Create clean tarball name with proper version
 TAR_NAME="asterisk-${REAL_VERSION}-arm64-debian13.tar.gz"
 echo ">>> [BUILDER] Creating archive: $TAR_NAME"
-tar -czvf "$OUTPUT_DIR/$TAR_NAME" .
+
+# Create the tarball (using tar with error checking)
+if tar -czf "$OUTPUT_DIR/$TAR_NAME" . 2>/dev/null; then
+    echo ">>> [BUILDER] Successfully created tarball"
+else
+    echo ">>> [BUILDER] ERROR: Failed to create tarball"
+    exit 1
+fi
 
 # Also save the real version to a file in the output directory for GitHub Actions
 echo "$REAL_VERSION" > "$OUTPUT_DIR/asterisk-real-version.txt"
@@ -185,4 +235,9 @@ else
     exit 1
 fi
 
+# List the output directory for debugging
+echo ">>> [BUILDER] Output directory contents:"
+ls -la "$OUTPUT_DIR/"
+
+echo ">>> [BUILDER] Build completed successfully!"
 echo ">>> [BUILDER] Real Asterisk version: $REAL_VERSION"
