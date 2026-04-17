@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       asterisk_version:
-        description: 'Asterisk Version (e.g., 22.9.0)'
+        description: 'Asterisk Version (e.g., 22-current)'
         required: true
-        default: '22.9.0'
+        default: '22-current'
   schedule:
     # Runs every 2 months (approx 8-9 weeks) - aligned with Asterisk 22 LTS release cycle
     - cron: '0 0 1 */2 *'
@@ -36,6 +36,7 @@ jobs:
 
       - name: Extract Asterisk Version
         id: version
+        shell: bash
         run: |
           # Extract version from the tarball
           TARBALL=$(ls asterisk-*.tar.gz | head -n1)
