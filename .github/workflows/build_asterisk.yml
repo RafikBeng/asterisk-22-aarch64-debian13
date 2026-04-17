@@ -6,7 +6,7 @@ on:
       asterisk_version:
         description: 'Asterisk Version (e.g., 22.9.0)'
         required: true
-        default: '22.9.0t'
+        default: '22.9.0'
   schedule:
     # Runs every 2 months (approx 8-9 weeks) - aligned with Asterisk 22 LTS release cycle
     - cron: '0 0 1 */2 *'
