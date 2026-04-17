@@ -101,7 +101,7 @@ if [ -f /tmp/asterisk_version.txt ]; then
 fi
 
 cd $BUILD_DIR/staging
-TAR_NAME="asterisk-${ASTERISK_VER}-arm64-debian12.tar.gz"
+TAR_NAME="asterisk-${ASTERISK_VER}-arm64-debian13.tar.gz"
 echo ">>> [BUILDER] Creating archive at $OUTPUT_DIR/$TAR_NAME..."
 tar -czvf "$OUTPUT_DIR/$TAR_NAME" .
 
