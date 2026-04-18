@@ -8,9 +8,9 @@
 # --- 1. CONFIGURATION ---
 REPO_OWNER="RafikBeng"
 REPO_NAME="asterisk-22-aarch64-debian13"
-FALLBACK_ARTIFACT="https://github.com/slythel2/FreePBX-17-for-Armbian-12-Bookworm/releases/download/1.0/asterisk-22-current-arm64-debian12-v2.tar.gz"
+FALLBACK_ARTIFACT="https://github.com/RafikBeng/asterisk-22-aarch64-debian13/releases/download/asterisk-22.9.0/asterisk-22.9.0-arm64-debian13.tar.gz"
 
-DB_ROOT_PASS="armbianpbx"
+DB_ROOT_PASS="Trixiepbx"
 LOG_FILE="/var/log/pbx_install.log"
 DEBIAN_FRONTEND=noninteractive
 
@@ -208,12 +208,21 @@ fi
 # --- 2. MAIN INSTALLER ---
 clear
 echo "========================================================"
-echo "   ARMBIAN 12 FREEPBX 17 INSTALLER (Asterisk 22 LTS)    "
+echo "   Debian 13 FREEPBX 17 INSTALLER (Asterisk 22)    "
 echo "========================================================"
 
 log "System upgrade and core dependencies..."
-apt-get update && apt-get upgrade -y
-apt-get install -y \
+#################### Ensure PHP 8.2 ###########
+apt purge -y php* libapache2-mod-php*
+apt autoremove -y
+apt install -y apt-transport-https lsb-release ca-certificates
+wget -O /etc/apt/trusted.gpg.d/php.gpg https://packages.sury.org/php/apt.gpg
+echo "deb https://packages.sury.org/php/ $(lsb_release -sc) main" | sudo tee /etc/apt/sources.list.d/sury-php.list
+apt update
+apt install -y php8.2 php8.2-cli php8.2-common php8.2-mysql php8.2-gd php8.2-curl php8.2-xml php8.2-mbstring php8.2-zip php8.2-soap php8.2-ldap php8.2-opcache php8.2-intl  php8.2-bcmath php8.2-pear
+update-alternatives --set php /usr/bin/php8.2
+###############################################
+apt install -y \
     git curl wget vim htop subversion sox pkg-config sngrep \
     apache2 mariadb-server mariadb-client odbc-mariadb \
     libxml2 libsqlite3-0 libjansson4 libedit2 libxslt1.1 \
@@ -222,14 +231,12 @@ apt-get install -y \
     liburiparser1 libjwt-dev liblua5.4-0 libtinfo6 \
     libsrtp2-1 libportaudio2 nodejs npm acl haveged jq \
     dnsutils bind9-dnsutils bind9-host fail2ban \
-    php php-cli php-common php-curl php-gd php-mbstring \
-    php-mysql php-soap php-xml php-intl php-zip php-bcmath \
-    php-ldap php-pear libapache2-mod-php
+    libapache2-mod-php
 
 # PHP Optimization + MySQL Socket Configuration
 for INI in /etc/php/8.2/apache2/php.ini /etc/php/8.2/cli/php.ini; do
     if [ -f "$INI" ]; then
-        sed -i 's/^memory_limit = .*/memory_limit = 512M/' "$INI"
+        sed -i 's/^memory_limit = .*/memory_limit = 128M/' "$INI"
         sed -i 's/^upload_max_filesize = .*/upload_max_filesize = 120M/' "$INI"
         sed -i 's/^post_max_size = .*/post_max_size = 120M/' "$INI"
         sed -i 's/^;date.timezone =.*/date.timezone = UTC/' "$INI"
@@ -571,62 +578,62 @@ if command -v fwconsole &> /dev/null; then
     
     # Install complete FreePBX module set, most people will use every module anyways,
     # or install them later, so why not.
-    log "Installing FreePBX modules (this may take 10-15 minutes)..."
+    log "Installing FreePBX modules (this may take 15-30 minutes)..."
     
     # ===== ADMIN MODULES =====
     fwconsole ma downloadinstall asterisk-cli &>/dev/null || true
     fwconsole ma downloadinstall backup &>/dev/null || true
     fwconsole ma downloadinstall blacklist &>/dev/null || true
-    fwconsole ma downloadinstall bulkhandler &>/dev/null || true
+    # fwconsole ma downloadinstall bulkhandler &>/dev/null || true
     fwconsole ma downloadinstall certman &>/dev/null || true
-    fwconsole ma downloadinstall cidlookup &>/dev/null || true
+    # fwconsole ma downloadinstall cidlookup &>/dev/null || true
     fwconsole ma downloadinstall configedit &>/dev/null || true
     fwconsole ma downloadinstall contactmanager &>/dev/null || true
-    fwconsole ma downloadinstall customappsreg &>/dev/null || true
+    # fwconsole ma downloadinstall customappsreg &>/dev/null || true
     fwconsole ma downloadinstall featurecodeadmin &>/dev/null || true
-    fwconsole ma downloadinstall presencestate &>/dev/null || true
-    fwconsole ma downloadinstall qxact_reports &>/dev/null || true
+    # fwconsole ma downloadinstall presencestate &>/dev/null || true
+    # fwconsole ma downloadinstall qxact_reports &>/dev/null || true
     fwconsole ma downloadinstall recordings &>/dev/null || true
-    fwconsole ma downloadinstall soundlang &>/dev/null || true
-    fwconsole ma downloadinstall superfecta &>/dev/null || true
+    # fwconsole ma downloadinstall soundlang &>/dev/null || true
+    # fwconsole ma downloadinstall superfecta &>/dev/null || true
     fwconsole ma downloadinstall ucp &>/dev/null || true
     fwconsole ma downloadinstall userman &>/dev/null || true
     
     # ===== APPLICATION MODULES =====
-    fwconsole ma downloadinstall amd &>/dev/null || true
+    # fwconsole ma downloadinstall amd &>/dev/null || true
     fwconsole ma downloadinstall announcement &>/dev/null || true
-    fwconsole ma downloadinstall calendar &>/dev/null || true
-    fwconsole ma downloadinstall callback &>/dev/null || true
+    # fwconsole ma downloadinstall calendar &>/dev/null || true
+    # fwconsole ma downloadinstall callback &>/dev/null || true
     fwconsole ma downloadinstall callflow &>/dev/null || true
     fwconsole ma downloadinstall callforward &>/dev/null || true
-    fwconsole ma downloadinstall callrecording &>/dev/null || true
+    # fwconsole ma downloadinstall callrecording &>/dev/null || true
     fwconsole ma downloadinstall callwaiting &>/dev/null || true
-    fwconsole ma downloadinstall conferences &>/dev/null || true
-    fwconsole ma downloadinstall dictate &>/dev/null || true
-    fwconsole ma downloadinstall directory &>/dev/null || true
-    fwconsole ma downloadinstall disa &>/dev/null || true
+    # fwconsole ma downloadinstall conferences &>/dev/null || true
+    # fwconsole ma downloadinstall dictate &>/dev/null || true
+    # fwconsole ma downloadinstall directory &>/dev/null || true
+    # fwconsole ma downloadinstall disa &>/dev/null || true
     fwconsole ma downloadinstall donotdisturb &>/dev/null || true
     fwconsole ma downloadinstall findmefollow &>/dev/null || true
-    fwconsole ma downloadinstall infoservices &>/dev/null || true
+    # fwconsole ma downloadinstall infoservices &>/dev/null || true
     fwconsole ma downloadinstall ivr &>/dev/null || true
-    fwconsole ma downloadinstall languages &>/dev/null || true
-    fwconsole ma downloadinstall miscapps &>/dev/null || true
+    # fwconsole ma downloadinstall languages &>/dev/null || true
+    # fwconsole ma downloadinstall miscapps &>/dev/null || true
     fwconsole ma downloadinstall miscdests &>/dev/null || true
-    fwconsole ma downloadinstall paging &>/dev/null || true
-    fwconsole ma downloadinstall parking &>/dev/null || true
-    fwconsole ma downloadinstall queueprio &>/dev/null || true
-    fwconsole ma downloadinstall queues &>/dev/null || true
+    # fwconsole ma downloadinstall paging &>/dev/null || true
+    # fwconsole ma downloadinstall parking &>/dev/null || true
+    # fwconsole ma downloadinstall queueprio &>/dev/null || true
+    # fwconsole ma downloadinstall queues &>/dev/null || true
     fwconsole ma downloadinstall ringgroups &>/dev/null || true
     fwconsole ma downloadinstall setcid &>/dev/null || true
     fwconsole ma downloadinstall timeconditions &>/dev/null || true
-    fwconsole ma downloadinstall tts &>/dev/null || true
-    fwconsole ma downloadinstall vmblast &>/dev/null || true
-    fwconsole ma downloadinstall wakeup &>/dev/null || true
+    # fwconsole ma downloadinstall tts &>/dev/null || true
+    # fwconsole ma downloadinstall vmblast &>/dev/null || true
+    # fwconsole ma downloadinstall wakeup &>/dev/null || true
     
     # ===== CONNECTIVITY MODULES =====
-    fwconsole ma downloadinstall dahdiconfig &>/dev/null || true
+    # fwconsole ma downloadinstall dahdiconfig &>/dev/null || true
     fwconsole ma downloadinstall api &>/dev/null || true
-    fwconsole ma downloadinstall sms &>/dev/null || true
+    # fwconsole ma downloadinstall sms &>/dev/null || true
     fwconsole ma downloadinstall webrtc &>/dev/null || true
     
     # ===== DASHBOARD =====
@@ -635,27 +642,27 @@ if command -v fwconsole &> /dev/null; then
     # ===== REPORTS MODULES =====
     fwconsole ma downloadinstall asterisklogfiles &>/dev/null || true
     fwconsole ma downloadinstall cdr &>/dev/null || true
-    fwconsole ma downloadinstall cel &>/dev/null || true
-    fwconsole ma downloadinstall phpinfo &>/dev/null || true
-    fwconsole ma downloadinstall printextensions &>/dev/null || true
+    # fwconsole ma downloadinstall cel &>/dev/null || true
+    # fwconsole ma downloadinstall phpinfo &>/dev/null || true
+    # fwconsole ma downloadinstall printextensions &>/dev/null || true
     fwconsole ma downloadinstall weakpasswords &>/dev/null || true
     
     # ===== SETTINGS MODULES =====
-    fwconsole ma downloadinstall asteriskapi &>/dev/null || true
-    fwconsole ma downloadinstall arimanager &>/dev/null || true
-    fwconsole ma downloadinstall fax &>/dev/null || true
-    fwconsole ma downloadinstall filestore &>/dev/null || true
-    fwconsole ma downloadinstall iaxsettings &>/dev/null || true
+    # fwconsole ma downloadinstall asteriskapi &>/dev/null || true
+    # fwconsole ma downloadinstall arimanager &>/dev/null || true
+    # fwconsole ma downloadinstall fax &>/dev/null || true
+    # fwconsole ma downloadinstall filestore &>/dev/null || true
+    # fwconsole ma downloadinstall iaxsettings &>/dev/null || true
     fwconsole ma downloadinstall musiconhold &>/dev/null || true
-    fwconsole ma downloadinstall pinsets &>/dev/null || true
+    # fwconsole ma downloadinstall pinsets &>/dev/null || true
     fwconsole ma downloadinstall sipsettings &>/dev/null || true
-    fwconsole ma downloadinstall ttsengines &>/dev/null || true
+    # fwconsole ma downloadinstall ttsengines &>/dev/null || true
     fwconsole ma downloadinstall voicemail &>/dev/null || true
     
     # ===== OTHER =====
-    fwconsole ma downloadinstall pm2 &>/dev/null || true
+    # fwconsole ma downloadinstall pm2 &>/dev/null || true
     
-    # Remove firewall module (causes network issues on Armbian - also proprietary module)
+    # Remove firewall module (causes network issues - also proprietary module)
     fwconsole ma remove firewall &>/dev/null || true
     
     log "All modules installed. Reloading FreePBX..."
@@ -803,7 +810,7 @@ FAIL2BAN_STATUS=$(check_service fail2ban)
 
 # Display Banner
 echo -e "${BLUE}================================================================${NC}"
-echo -e "${BLUE}   ARMBIAN PBX - ASTERISK 22 + FREEPBX 17 (ARM64)${NC}"
+echo -e "${BLUE}   Raspberry Pi PBX - ASTERISK 22 + FREEPBX 17 (ARM64)${NC}"
 echo -e "${BLUE}================================================================${NC}"
 echo -e ""
 echo -e " ${YELLOW}Web Interface:${NC}  http://$IP_ADDR/admin"
