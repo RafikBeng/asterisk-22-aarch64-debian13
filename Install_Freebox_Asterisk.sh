@@ -223,16 +223,16 @@ apt install -y php8.2 php8.2-cli php8.2-common php8.2-mysql php8.2-gd php8.2-cur
 update-alternatives --set php /usr/bin/php8.2
 ##################Install NodeJs
 # First, remove any existing Node.js/npm packages
-sudo apt remove -y --purge nodejs npm nodejs-legacy
-sudo apt autoremove -y
-sudo apt clean -y
+apt remove -y --purge nodejs npm nodejs-legacy
+apt autoremove -y
+apt clean -y
 
 # Update package list
-sudo apt update
+apt update
 
 # Install Node.js and npm from NodeSource (official repository)
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-sudo apt install -y nodejs
+apt install -y nodejs
 ###############################################
 apt install -y \
     git curl wget vim htop subversion sox pkg-config sngrep \
