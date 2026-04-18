@@ -1,5 +1,4 @@
 name: Check for New Asterisk Version
-
 on:
   schedule:
     - cron: '0 2 * * *'
@@ -17,11 +16,11 @@ permissions:
 jobs:
   check-version:
     runs-on: ubuntu-latest
-    
+
     outputs:
       new_version: ${{ steps.check.outputs.new_version }}
       should_build: ${{ steps.check.outputs.should_build }}
-    
+
     steps:
       - name: Get Latest Asterisk 22.x Version
         id: get_latest
@@ -31,42 +30,40 @@ jobs:
             sed 's/asterisk-\(.*\)\.tar\.gz/\1/' | \
             sort -V | \
             tail -n1)
-          
+
           echo "latest_version=$LATEST_VERSION" >> $GITHUB_OUTPUT
           echo ">>> Latest Asterisk 22 version: $LATEST_VERSION"
-      
+
       - name: Get Last Built Version from GitHub Release
         id: get_last
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Try to get the latest release tag
           LATEST_RELEASE=""
-          
-          # Use GitHub CLI to get latest release (if available)
-          if command -v gh &> /dev/null; then
-            LATEST_TAG=$(gh release list --limit 1 --json tagName --jq '.[0].tagName' 2>/dev/null || echo "")
-            if [[ "$LATEST_TAG" =~ asterisk-([0-9]+\.[0-9]+\.[0-9]+) ]]; then
-              LATEST_RELEASE="${BASH_REMATCH[1]}"
-            fi
+
+          # Use the API directly — no checkout or gh CLI auth issues
+          LATEST_TAG=$(curl -s \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/releases/latest" \
+            | jq -r '.tag_name // empty')
+
+          echo ">>> Raw tag from API: '${LATEST_TAG}'"
+
+          if [[ "$LATEST_TAG" =~ ^asterisk-([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+            LATEST_RELEASE="${BASH_REMATCH[1]}"
           fi
-          
-          # Alternative: use git tags
-          if [ -z "$LATEST_RELEASE" ]; then
-            LATEST_TAG=$(git tag | grep 'asterisk-[0-9]\+\.[0-9]\+\.[0-9]\+' | sort -V | tail -n1)
-            if [[ "$LATEST_TAG" =~ asterisk-([0-9]+\.[0-9]+\.[0-9]+) ]]; then
-              LATEST_RELEASE="${BASH_REMATCH[1]}"
-            fi
-          fi
-          
+
           echo "last_version=$LATEST_RELEASE" >> $GITHUB_OUTPUT
           echo ">>> Last built version: ${LATEST_RELEASE:-none}"
-      
+
       - name: Check if New Version Available
         id: check
         run: |
           LATEST="${{ steps.get_latest.outputs.latest_version }}"
           LAST="${{ steps.get_last.outputs.last_version }}"
           FORCE="${{ github.event.inputs.force_version }}"
-          
+
           if [ -n "$FORCE" ]; then
             echo ">>> Force building version: $FORCE"
             echo "new_version=$FORCE" >> $GITHUB_OUTPUT
@@ -79,12 +76,12 @@ jobs:
             echo ">>> No new version. Latest $LATEST already built."
             echo "should_build=false" >> $GITHUB_OUTPUT
           fi
-          
+
   trigger-build:
     needs: check-version
     if: needs.check-version.outputs.should_build == 'true'
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Trigger Build
         uses: actions/github-script@v7
@@ -92,7 +89,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const version = '${{ needs.check-version.outputs.new_version }}';
-            
+
             await github.rest.actions.createWorkflowDispatch({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -102,5 +99,5 @@ jobs:
                 asterisk_version: version
               }
             });
-            
+
             console.log(`✅ Triggered build for Asterisk ${version}`);
