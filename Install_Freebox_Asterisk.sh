@@ -219,8 +219,20 @@ apt install -y apt-transport-https lsb-release ca-certificates
 wget -O /etc/apt/trusted.gpg.d/php.gpg https://packages.sury.org/php/apt.gpg
 echo "deb https://packages.sury.org/php/ $(lsb_release -sc) main" | sudo tee /etc/apt/sources.list.d/sury-php.list
 apt update
-apt install -y php8.2 php8.2-cli php8.2-common php8.2-mysql php8.2-gd php8.2-curl php8.2-xml php8.2-mbstring php8.2-zip php8.2-soap php8.2-ldap php8.2-opcache php8.2-intl  php8.2-bcmath php8.2-pear
+apt install -y php8.2 php8.2-cli php8.2-common php8.2-mysql php8.2-gd php8.2-curl php8.2-xml php8.2-mbstring php8.2-zip php8.2-soap php8.2-ldap php8.2-opcache php8.2-intl  php8.2-bcmath php-pear
 update-alternatives --set php /usr/bin/php8.2
+##################Install NodeJs
+# First, remove any existing Node.js/npm packages
+sudo apt remove -y --purge nodejs npm nodejs-legacy
+sudo apt autoremove -y
+sudo apt clean -y
+
+# Update package list
+sudo apt update
+
+# Install Node.js and npm from NodeSource (official repository)
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt install -y nodejs
 ###############################################
 apt install -y \
     git curl wget vim htop subversion sox pkg-config sngrep \
@@ -229,7 +241,7 @@ apt install -y \
     libopus0 libvorbis0a libspeex1 libspeexdsp1 libgsm1 \
     unixodbc unixodbc-dev odbcinst libltdl7 libicu-dev \
     liburiparser1 libjwt-dev liblua5.4-0 libtinfo6 \
-    libsrtp2-1 libportaudio2 nodejs npm acl haveged jq \
+    libsrtp2-1 libportaudio2 acl haveged jq \
     dnsutils bind9-dnsutils bind9-host fail2ban \
     libapache2-mod-php
 
