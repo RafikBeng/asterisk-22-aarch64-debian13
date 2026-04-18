@@ -587,6 +587,26 @@ if command -v fwconsole &> /dev/null; then
     log "Restarting Asterisk to load DNS libraries..."
     systemctl restart asterisk
     sleep 5
+
+    # --- PURGE AUTO-INSTALLED DEFAULT MODULES ---
+    log "Removing unwanted auto-installed modules..."
+    MODULES_TO_REMOVE=(
+        amd arimanager bulkhandler calendar callback
+        callrecording cel cidlookup conferences
+        customappsreg dahdiconfig dictate directory disa
+        fax iaxsettings infoservices languages
+        miscapps paging parking phpinfo pinsets
+        pm2 presencestate printextensions
+        queueprio queues qxact_reports
+        soundlang superfecta tts ttsengines
+        ucp vmblast wakeup
+    )
+
+    for mod in "${MODULES_TO_REMOVE[@]}"; do
+        fwconsole ma remove "$mod" &>/dev/null || true
+    done
+
+    log "Unwanted modules removed."
     
     # Install complete FreePBX module set, most people will use every module anyways,
     # or install them later, so why not.
