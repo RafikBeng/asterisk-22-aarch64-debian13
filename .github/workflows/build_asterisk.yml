@@ -102,7 +102,7 @@ jobs:
             **Architecture:** ARM64 (aarch64)  
             **Target OS:** Debian 13 Trixie  
             **Build Date:** ${{ steps.version.outputs.build_date }}  
-            **Build Number:** #${{ github.run_number }}
+            
             
             ### Artifact
             
