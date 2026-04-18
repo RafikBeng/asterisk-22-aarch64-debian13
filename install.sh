@@ -7,7 +7,8 @@ if [ "$EUID" -ne 0 ]; then
   exit 1
 fi
 
-TAR_FILE="asterisk-22.9.0-aarch64-debian13.tar.gz"
+TAR_FILE="asterisk-22.9.0-arm64-debian13.tar.gz"
+
 
 if [ ! -f "$TAR_FILE" ]; then
   echo "ERROR: $TAR_FILE not found!"
@@ -24,6 +25,7 @@ apt-get install -y \
   libsrtp2-1 libspandsp2 libjansson4 libgsm1 \
   libspeex1 libspeexdsp1 libogg0 libvorbis0a
 
+wget -q https://github.com/RafikBeng/asterisk-22-aarch64-debian13/releases/download/asterisk-22.9.0/asterisk-22.9.0-arm64-debian13.tar.gz
 echo "Extracting Asterisk files..."
 tar xzf "$TAR_FILE" -C /
 
