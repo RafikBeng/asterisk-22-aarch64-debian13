@@ -92,8 +92,9 @@ jobs:
       - name: Upload Release to GitHub
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: asterisk-${{ steps.version.outputs.version }}-build${{ github.run_number }}
+          tag_name: asterisk-${{ steps.version.outputs.version }}   # ← no build number
           name: "Asterisk ${{ steps.version.outputs.version }} - ARM64 Build"
+          update_release: true                                        # ← overwrite if tag exists
           body: |
             ## Asterisk ${{ steps.version.outputs.version }} - ARM64 Debian 13 (Trixie)
             
